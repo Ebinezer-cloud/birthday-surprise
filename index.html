@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#32133f">
+<title>Birthday Surprise ❤️</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--pink:#ff9acb;--hot:#ff4f9a;--purple:#a76bff}
+body{font-family:Segoe UI,Arial,sans-serif;color:#fff;background:radial-gradient(circle at top,#69305f 0,#32133f 48%,#140d29 100%);min-height:100vh;overflow-x:hidden;text-align:center}
+section{min-height:100vh;padding:42px 18px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;z-index:1}
+h1{font-size:clamp(2.3rem,8vw,4.5rem);color:#ffd0e7;text-shadow:0 0 24px #ff4f9a;margin:14px 0}
+h2{color:#ffc3df;margin-bottom:14px}
+p{line-height:1.8;max-width:650px;color:#ffe8f3}
+button,.upload-label{border:0;border-radius:999px;padding:13px 23px;margin:10px 6px;background:linear-gradient(45deg,var(--hot),var(--purple));color:white;font-size:15px;font-weight:650;cursor:pointer;box-shadow:0 8px 24px #e83e9b45;transition:.2s}
+button:hover,.upload-label:hover{transform:translateY(-2px);filter:brightness(1.1)}
+button.secondary{background:#ffffff18;border:1px solid #ffffff45;box-shadow:none}
+.hidden{display:none!important}
+.card{width:min(94%,720px);padding:26px;margin:18px auto;border-radius:24px;background:#ffffff12;border:1px solid #ffffff2b;backdrop-filter:blur(14px);box-shadow:0 15px 45px #0002}
+.big-emoji{font-size:76px;animation:bounce 2s infinite}
+@keyframes bounce{50%{transform:translateY(-12px)}}
+#letter{white-space:pre-line;text-align:left;max-width:620px;margin:auto}
+#gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-top:18px}
+.photo-item{position:relative}
+.photo-item img{width:100%;height:175px;object-fit:cover;border-radius:15px;border:2px solid #ffc3df}
+.photo-item button{padding:7px 12px;font-size:12px;margin:6px}
+input[type=file]{display:none}
+.upload-label{display:inline-block}
+#musicName{font-size:14px;color:#ffd5e8;margin:8px}
+.heart{position:fixed;bottom:-40px;z-index:0;pointer-events:none;animation:rise linear forwards}
+@keyframes rise{to{transform:translateY(-115vh) rotate(360deg);opacity:0}}
+#confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:5}
+.small{font-size:13px;color:#eac8dd}
+footer{padding:25px;color:#ffc3df;position:relative;z-index:1}
+@media(max-width:480px){.card{padding:20px 15px}.photo-item img{height:145px}}
+</style>
+</head>
+<body>
+<canvas id="confetti"></canvas>
+
+<section id="welcome">
+  <div style="font-size:58px">🎀 💗 🎂</div>
+  <h1>Happy Birthday!</h1>
+  <h2 id="welcomeName">My Special Girl ❤️</h2>
+  <p>A little surprise made with lots of love, just for you.</p>
+  <button id="openBtn">Open Your Surprise 💌</button>
+</section>
+
+<section id="surprise" class="hidden">
+  <div style="font-size:48px">✨ 💕 ✨</div>
+  <h1>Happy Birthday!</h1>
+  <div class="big-emoji">🎂</div>
+  <h2>Make a beautiful wish! 🌟</h2>
+  <button id="celebrateBtn">Celebrate! 🎉</button>
+
+  <div class="card">
+    <h2>💌 A Little Message For You</h2>
+    <p id="letter"></p>
+  </div>
+
+  <div class="card">
+    <h2>📸 Our Beautiful Memories</h2>
+    <p>Add your favourite pictures. They'll stay saved in this browser when you close and reopen the website.</p>
+    <label class="upload-label" for="photoInput">Choose Photos 📷</label>
+    <input type="file" id="photoInput" accept="image/*" multiple>
+    <div id="gallery"></div>
+    <p id="photoStatus" class="small"></p>
+  </div>
+
+  <div class="card">
+    <h2>🎵 Your Special Music</h2>
+    <p>Choose an audio file. It will be saved in this browser for next time.</p>
+    <label class="upload-label" for="musicInput">Choose Music 🎶</label>
+    <input type="file" id="musicInput" accept="audio/*">
+    <div id="musicName">No song saved yet</div>
+    <button id="playBtn">Play Music ▶</button>
+    <button class="secondary" id="removeMusicBtn">Remove Music</button>
+    <audio id="music" loop></audio>
+    <p class="small">Browsers usually require a click before music can play. Press Play Music after reopening.</p>
+  </div>
+
+  <h1>Keep Smiling! ❤️</h1>
+  <p>May your life be filled with happiness, beautiful memories and endless success.</p>
+  <div style="font-size:48px;margin-top:22px">❤️ 🧸 🌹 💗</div>
+</section>
+
+<footer>Made with ❤️ Just for You</footer>
+
+<script>
+/* PERSONALIZE HERE */
+const GIRL_NAME = "My Princess";
+const MESSAGE = `Happy Birthday, ${GIRL_NAME}! ❤️
+
+Today is your special day, and I wish you all the happiness in the world.
+
+Your smile makes every moment beautiful. I hope all your dreams come true.
+
+Thank you for being such a special part of my life.
+
+Keep smiling, keep shining and stay blessed.
+
+Once again, Happy Birthday! 🎂❤️
+
+With lots of love! 💗`;
+
+document.getElementById("welcomeName").textContent = GIRL_NAME;
+document.getElementById("letter").textContent = MESSAGE;
+
+const DB_NAME = "BirthdaySurpriseDB";
+const DB_VERSION = 1;
+let db = null;
+let musicObjectUrl = null;
+const music = document.getElementById("music");
+
+function openDatabase(){
+  return new Promise((resolve,reject)=>{
+    const request = indexedDB.open(DB_NAME,DB_VERSION);
+    request.onupgradeneeded = event => {
+      const database = event.target.result;
+      if(!database.objectStoreNames.contains("photos"))
+        database.createObjectStore("photos",{keyPath:"id",autoIncrement:true});
+      if(!database.objectStoreNames.contains("music"))
+        database.createObjectStore("music",{keyPath:"id"});
+    };
+    request.onsuccess = event => resolve(event.target.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+function transactionDone(tx){
+  return new Promise((resolve,reject)=>{
+    tx.oncomplete=resolve;
+    tx.onerror=()=>reject(tx.error);
+    tx.onabort=()=>reject(tx.error);
+  });
+}
+async function savePhoto(file){
+  const tx=db.transaction("photos","readwrite");
+  tx.objectStore("photos").add({file,name:file.name});
+  await transactionDone(tx);
+}
+async function getPhotos(){
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction("photos","readonly");
+    const req=tx.objectStore("photos").getAll();
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+}
+async function deletePhoto(id){
+  const tx=db.transaction("photos","readwrite");
+  tx.objectStore("photos").delete(id);
+  await transactionDone(tx);
+}
+async function renderPhotos(){
+  const gallery=document.getElementById("gallery");
+  gallery.innerHTML="";
+  const photos=await getPhotos();
+  photos.forEach(photo=>{
+    const wrapper=document.createElement("div");
+    wrapper.className="photo-item";
+    const img=document.createElement("img");
+    const url=URL.createObjectURL(photo.file);
+    img.src=url; img.alt=photo.name;
+    img.onload=()=>URL.revokeObjectURL(url);
+    const remove=document.createElement("button");
+    remove.className="secondary"; remove.textContent="Remove";
+    remove.addEventListener("click",async()=>{
+      await deletePhoto(photo.id);
+      renderPhotos();
+    });
+    wrapper.append(img,remove);
+    gallery.appendChild(wrapper);
+  });
+  document.getElementById("photoStatus").textContent =
+    photos.length ? `${photos.length} photo(s) saved on this device.` : "No photos uploaded yet.";
+}
+async function saveMusic(file){
+  const tx=db.transaction("music","readwrite");
+  tx.objectStore("music").put({id:"birthdaySong",file,name:file.name});
+  await transactionDone(tx);
+}
+async function getMusic(){
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction("music","readonly");
+    const req=tx.objectStore("music").get("birthdaySong");
+    req.onsuccess=()=>resolve(req.result||null);
+    req.onerror=()=>reject(req.error);
+  });
+}
+async function loadMusic(){
+  const saved=await getMusic();
+  if(musicObjectUrl){URL.revokeObjectURL(musicObjectUrl);musicObjectUrl=null;}
+  if(saved){
+    musicObjectUrl=URL.createObjectURL(saved.file);
+    music.src=musicObjectUrl;
+    document.getElementById("musicName").textContent="Saved: "+saved.name;
+  }else{
+    music.removeAttribute("src");
+    music.load();
+    document.getElementById("musicName").textContent="No song saved yet";
+  }
+}
+async function removeMusic(){
+  music.pause();
+  const tx=db.transaction("music","readwrite");
+  tx.objectStore("music").delete("birthdaySong");
+  await transactionDone(tx);
+  await loadMusic();
+}
+
+document.getElementById("photoInput").addEventListener("change",async event=>{
+  const files=[...event.target.files].filter(file=>file.type.startsWith("image/"));
+  try{
+    for(const file of files) await savePhoto(file);
+    await renderPhotos();
+  }catch(error){
+    alert("Could not save the photos. Browser storage may be full.");
+    console.error(error);
+  }
+  event.target.value="";
+});
+document.getElementById("musicInput").addEventListener("change",async event=>{
+  const file=event.target.files[0];
+  if(!file) return;
+  if(!file.type.startsWith("audio/")){alert("Please choose an audio file.");return;}
+  try{await saveMusic(file);await loadMusic();}
+  catch(error){alert("Could not save the music. Browser storage may be full.");console.error(error);}
+  event.target.value="";
+});
+document.getElementById("playBtn").addEventListener("click",async()=>{
+  if(!music.src){alert("Choose a music file first.");return;}
+  if(music.paused){
+    try{await music.play();document.getElementById("playBtn").textContent="Pause Music ⏸";}
+    catch(error){alert("Your browser could not play this audio file.");}
+  }else{
+    music.pause();document.getElementById("playBtn").textContent="Play Music ▶";
+  }
+});
+music.addEventListener("ended",()=>document.getElementById("playBtn").textContent="Play Music ▶");
+music.addEventListener("pause",()=>document.getElementById("playBtn").textContent="Play Music ▶");
+document.getElementById("removeMusicBtn").addEventListener("click",removeMusic);
+
+document.getElementById("openBtn").addEventListener("click",async ()=>{
+  document.getElementById("welcome").classList.add("hidden");
+  document.getElementById("surprise").classList.remove("hidden");
+  window.scrollTo({top:0,behavior:"smooth"});
+  celebrate();
+
+  // Start the saved birthday song from this user click.
+  // Browsers may still block playback in some situations.
+  if(music.src){
+    try {
+      await music.play();
+      document.getElementById("playBtn").textContent = "Pause Music ⏸";
+    } catch(error) {
+      console.log("Music autoplay was blocked. Use the Play Music button.");
+    }
+  }
+});
+document.getElementById("celebrateBtn").addEventListener("click",celebrate);
+
+function createHeart(){
+  const heart=document.createElement("div");
+  heart.className="heart";
+  heart.textContent=["❤️","💕","💗","💖","🌸"][Math.floor(Math.random()*5)];
+  heart.style.left=Math.random()*100+"vw";
+  heart.style.fontSize=(16+Math.random()*22)+"px";
+  heart.style.animationDuration=(5+Math.random()*5)+"s";
+  document.body.appendChild(heart);
+  setTimeout(()=>heart.remove(),10500);
+}
+setInterval(createHeart,500);
+
+const canvas=document.getElementById("confetti");
+const ctx=canvas.getContext("2d");
+let pieces=[];
+function resizeCanvas(){canvas.width=innerWidth;canvas.height=innerHeight;}
+resizeCanvas();window.addEventListener("resize",resizeCanvas);
+function celebrate(){
+  pieces=[];
+  for(let i=0;i<150;i++) pieces.push({
+    x:Math.random()*canvas.width,y:-Math.random()*canvas.height,
+    size:3+Math.random()*6,speed:2+Math.random()*4,
+    drift:Math.random()*3-1.5,rotation:Math.random()*6
+  });
+}
+function animateConfetti(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  pieces.forEach((p,i)=>{
+    ctx.fillStyle=["#ff80c0","#ffe066","#fff","#b68cff"][i%4];
+    ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rotation);
+    ctx.fillRect(0,0,p.size,p.size*1.5);ctx.restore();
+    p.y+=p.speed;p.x+=p.drift;p.rotation+=.04;
+  });
+  pieces=pieces.filter(p=>p.y<canvas.height+20);
+  requestAnimationFrame(animateConfetti);
+}
+animateConfetti();
+
+(async()=>{
+  try{
+    db=await openDatabase();
+    await renderPhotos();
+    await loadMusic();
+  }catch(error){
+    console.error(error);
+    alert("Browser storage is unavailable. Try opening this page in a modern browser.");
+  }
+})();
+</script>
+</body>
+</html>
